@@ -854,7 +854,7 @@ function bindTap(id,fn){
 function chooseMode(m){
   S=blankState();
   S.mode=m;
-  S.tname = m==='showdown' ? 'Brawl Stars Showdown' : 'Power Match Championship';
+  S.tname = m==='showdown' ? 'Showdown Championship' : 'Power Match Championship';
   initSetup();
   switchScreen('setup-screen');
 }
@@ -965,7 +965,7 @@ function startTournament(){
     S.players[i]=inp.value.trim()||def;
   });
   S.players=S.players.filter(p=>p.trim());
-  S.tname=document.getElementById('inp-tname').value.trim()||'Brawl Stars Championship';
+  S.tname=document.getElementById('inp-tname').value.trim()||(S.mode==='showdown'?'Showdown Championship':'Power Match Championship');
 
   const dup=findDuplicateName(S.players);
   if(dup){
