@@ -539,6 +539,109 @@ select option{background:#1a1040}
 .bk-champ-lbl{font-size:.7rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 
 .empty-hint{color:var(--muted);font-size:.9rem;font-weight:600;padding:.5rem 0}
+
+/* ════════════════════════════════════════════
+   DESKTOP LAYOUT (≥900px) — distinct from mobile
+   ════════════════════════════════════════════ */
+@media(min-width:900px){
+
+  /* ---- MODE SELECT: bigger, breathing room ---- */
+  #mode-screen{padding:2rem;height:100dvh}
+  .mode-box{max-width:760px}
+  .mode-logo{width:90px;height:90px}
+  .mode-title{font-size:2.4rem}
+  .mode-sub{font-size:1.05rem;margin-bottom:2rem}
+  .mode-cards{grid-template-columns:1fr 1fr;gap:1.5rem}
+  .mode-card{padding:2rem 1.6rem;border-radius:22px}
+  .mode-card img{width:96px;height:96px}
+  .mode-card-name{font-size:1.5rem}
+  .mode-card-desc{font-size:.95rem}
+
+  /* ---- SETUP: two-column grid, no scroll, no huge side gaps ---- */
+  #setup-screen{padding:1.5rem 2rem;min-height:100dvh;align-items:center}
+  .setup-box{
+    max-width:880px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    column-gap:2.5rem;row-gap:0;
+    align-content:start;
+    padding:2rem 3rem;
+  }
+  /* full-width rows */
+  .setup-box .back-link{grid-column:1/-1;justify-self:start;margin-bottom:.4rem}
+  .setup-box .logo-area{grid-column:1/-1;margin-bottom:1rem}
+  .setup-box .btn-start{grid-column:1/-1;margin-top:.8rem}
+  /* players + points span both columns so long lists don't get cramped */
+  #grp-players-wrap{grid-column:1/-1}
+  .setup-box #grp-players{grid-column:1/-1}
+  #grp-players .players-list{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  /* the players group and points group placed full-width for clarity */
+  .setup-box #grp-pts{grid-column:1/-1}
+  .setup-box label{font-size:.82rem}
+  .logo-icon{width:60px;height:60px}
+  .logo-title{font-size:1.85rem}
+  .pts-grid{grid-template-columns:repeat(10,1fr)}
+
+  /* ---- TOURNAMENT: centered content, sane width ---- */
+  .t-header{padding:1.1rem 2.5rem}
+  .t-info .t-name{font-size:1.45rem}
+  .t-info .t-sub{font-size:.9rem}
+  .t-badge{padding:.6rem 1.4rem}
+  .t-badge-num{font-size:1.7rem}
+  .t-logo{width:60px;height:60px}
+
+  /* leaderboard + fixtures side by side for Power table; centered single for Showdown */
+  .t-body{
+    max-width:1240px;width:100%;margin:0 auto;
+    padding:1.5rem 2.5rem;flex:1;
+  }
+  /* when fixtures visible (Power table), two columns */
+  .t-body.has-fixtures{
+    display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:start;
+  }
+  .t-body.has-fixtures .lb-wrap{padding:0;position:sticky;top:1.5rem}
+  .t-body.has-fixtures #fixtures-block{padding:0}
+  .lb-wrap{padding:0}
+  .section-block{padding:0}
+  .lb-label{font-size:1rem}
+  .lb-table{min-width:0}
+  .lb-table thead th{font-size:.8rem;padding-bottom:.6rem}
+  .lb-row td{padding:.95rem .8rem}
+  .p-name{font-size:1.05rem}
+  .total-col{font-size:1.5rem}
+  .lb-row{transition:transform .15s}
+  .lb-row:hover{transform:translateX(3px)}
+
+  /* fixtures: single column inside its panel (round grouping reads top-to-bottom) */
+  #fixtures-list{display:block}
+  .t-body.has-fixtures{grid-template-columns:1fr 1fr;align-items:start}
+
+  .action-bar{
+    max-width:1240px;width:100%;margin:0 auto;
+    padding:1rem 2.5rem 1.6rem;background:none;position:static;
+  }
+  .btn-main{flex:0 1 auto;min-width:260px}
+  .btn-sec{flex:0 0 auto}
+
+  /* ---- PLAYOFF BRACKET: centered, larger ---- */
+  .bracket-scroll{padding:1.5rem 2.5rem;display:flex;justify-content:center}
+  .bracket{gap:3rem}
+  .bk-round{min-width:200px}
+  .bk-slot{font-size:.95rem;padding:.65rem .8rem}
+
+  /* ---- PODIUM ---- */
+  #podium-screen{padding:3rem 2rem}
+  .p-title{font-size:3rem}
+  .podium-stage{max-width:480px}
+  .final-wrap{max-width:720px}
+  .final-table tbody td{font-size:1rem;padding:.7rem 1.4rem}
+  .final-table thead th{padding:.6rem 1.4rem}
+}
+
+/* very wide screens: keep things readable */
+@media(min-width:1500px){
+  .t-body, .action-bar{max-width:1360px}
+}
 </style>
 </head>
 <body>
@@ -611,7 +714,7 @@ select option{background:#1a1040}
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group" id="grp-players">
       <label id="lbl-players">Гравці (2–10)</label>
       <div class="players-list" id="players-list"></div>
       <button class="btn-add" id="btn-add-player">+ Додати</button>
@@ -645,20 +748,22 @@ select option{background:#1a1040}
     </div>
   </div>
 
-  <div class="lb-wrap">
-    <div class="lb-label" id="lb-label">📊 Таблиця лідерів</div>
-    <div style="overflow-x:auto">
-      <table class="lb-table">
-        <thead id="lb-head"></thead>
-        <tbody id="lb-body"></tbody>
-      </table>
+  <div class="t-body">
+    <div class="lb-wrap">
+      <div class="lb-label" id="lb-label">📊 Таблиця лідерів</div>
+      <div style="overflow-x:auto">
+        <table class="lb-table">
+          <thead id="lb-head"></thead>
+          <tbody id="lb-body"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
 
-  <!-- Power Match: fixtures list -->
-  <div class="section-block" id="fixtures-block" style="display:none">
-    <div class="section-title">🗓️ Матчі турніру</div>
-    <div id="fixtures-list"></div>
+    <!-- Power Match: fixtures list -->
+    <div class="section-block" id="fixtures-block" style="display:none">
+      <div class="section-title">🗓️ Матчі турніру</div>
+      <div id="fixtures-list"></div>
+    </div>
   </div>
 
   <div class="action-bar" id="action-bar">
@@ -1125,6 +1230,8 @@ function showTournament(){
   document.getElementById('lb-label').innerHTML = isShow ? '📊 Таблиця лідерів' : '📊 Турнірна таблиця';
   document.getElementById('t-badge-lbl').textContent = isShow ? 'ігор зіграно' : 'матчів';
   document.getElementById('fixtures-block').style.display = isShow?'none':'block';
+  const tbody=document.querySelector('#tournament-screen .t-body');
+  if(tbody)tbody.classList.toggle('has-fixtures', !isShow);
 
   updateTournament();
 }
