@@ -540,6 +540,61 @@ select option{background:#1a1040}
 
 .empty-hint{color:var(--muted);font-size:.9rem;font-weight:600;padding:.5rem 0}
 
+/* ══════════ MUSIC PLAYER ══════════ */
+.music-player{
+  position:fixed;right:14px;z-index:300;
+  bottom:calc(14px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+}
+.mp-toggle{
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,var(--purple),#5b21b6);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 6px 20px rgba(0,0,0,.45);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.25rem;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .15s,box-shadow .15s;
+}
+.mp-toggle:active{transform:scale(.92)}
+@media(hover:hover){.mp-toggle:hover{box-shadow:0 8px 26px rgba(124,58,237,.5)}}
+.mp-toggle.playing{animation:mp-pulse 2s ease-in-out infinite}
+@keyframes mp-pulse{0%,100%{box-shadow:0 6px 20px rgba(124,58,237,.4)}50%{box-shadow:0 6px 26px rgba(124,58,237,.75)}}
+.mp-toggle.off{background:linear-gradient(135deg,#3a3458,#2a2548);opacity:.85}
+
+.mp-panel{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:.7rem .8rem;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
+  width:210px;
+  transform:translateY(10px) scale(.96);opacity:0;pointer-events:none;
+  transform-origin:bottom right;transition:transform .2s,opacity .2s;
+}
+.mp-panel.open{transform:none;opacity:1;pointer-events:all}
+.mp-track{
+  font-family:'Montserrat',sans-serif;font-weight:700;font-size:.78rem;
+  color:var(--text);margin-bottom:.55rem;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  padding:.15rem .2rem;
+}
+.mp-controls{display:flex;gap:.35rem;justify-content:center}
+.mp-btn{
+  flex:1;height:38px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--border);
+  color:var(--text);font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  -webkit-tap-highlight-color:transparent;transition:background .15s,transform .1s;
+}
+.mp-btn:active{transform:scale(.9)}
+@media(hover:hover){.mp-btn:hover{background:#341e7a}}
+.mp-btn.mp-mute.muted{background:rgba(255,93,108,.2);border-color:var(--red)}
+
+@media(min-width:900px){
+  .music-player{right:22px;bottom:22px}
+  .mp-toggle{width:54px;height:54px;font-size:1.4rem}
+  .mp-panel{width:240px}
+}
+
 /* ════════════════════════════════════════════
    DESKTOP LAYOUT (≥900px) — distinct from mobile
    ════════════════════════════════════════════ */
@@ -885,6 +940,23 @@ select option{background:#1a1040}
 </div>
 
 <div class="confetti-wrap" id="confetti-wrap"></div>
+
+<!-- ══════════ MUSIC PLAYER ══════════ -->
+<div class="music-player" id="music-player">
+  <div class="mp-panel" id="mp-panel">
+    <div class="mp-track" id="mp-track">—</div>
+    <div class="mp-controls">
+      <button type="button" class="mp-btn" id="mp-prev" title="Попередній">⏮</button>
+      <button type="button" class="mp-btn mp-play" id="mp-play" title="Пауза">⏸</button>
+      <button type="button" class="mp-btn" id="mp-next" title="Наступний">⏭</button>
+      <button type="button" class="mp-btn mp-mute" id="mp-mute" title="Вимкнути звук">🔇</button>
+    </div>
+  </div>
+  <button type="button" class="mp-toggle" id="mp-toggle" title="Музика">
+    <span id="mp-toggle-icon">🔊</span>
+  </button>
+  <audio id="mp-audio" preload="none"></audio>
+</div>
 
 <script>
 /* ════════════════════════════════════════════════
@@ -1999,6 +2071,116 @@ function confetti(){
   setTimeout(()=>{wrap.innerHTML=''},6000);
 }
 
+/* ════════════ MUSIC PLAYER ════════════ */
+const PLAYLIST=[
+  {name:'OG Classic',         src:'music/track1.mp3'},
+  {name:'Steampunk',          src:'music/track2.mp3'},
+  {name:'New Brawler Sirius', src:'music/track3.mp3'},
+  {name:'Crush The Kaiju',    src:'music/track4.mp3'}
+];
+let MP={ idx:0, on:true, started:false };
+
+function mpLoadState(){
+  try{
+    const d=JSON.parse(localStorage.getItem('bst_music')||'{}');
+    if(typeof d.idx==='number'&&d.idx>=0&&d.idx<PLAYLIST.length)MP.idx=d.idx;
+    if(typeof d.on==='boolean')MP.on=d.on;
+  }catch(e){}
+}
+function mpSaveState(){
+  try{localStorage.setItem('bst_music',JSON.stringify({idx:MP.idx,on:MP.on}));}catch(e){}
+}
+
+function initMusic(){
+  mpLoadState();
+  const audio=document.getElementById('mp-audio');
+  const toggle=document.getElementById('mp-toggle');
+  const toggleIcon=document.getElementById('mp-toggle-icon');
+  const panel=document.getElementById('mp-panel');
+  if(!audio||!toggle)return;
+
+  function loadTrack(i,autoplay){
+    MP.idx=(i+PLAYLIST.length)%PLAYLIST.length;
+    audio.src=PLAYLIST[MP.idx].src;
+    document.getElementById('mp-track').textContent=PLAYLIST[MP.idx].name;
+    mpSaveState();
+    if(autoplay){ audio.play().catch(()=>{}); }
+  }
+  function refreshUI(){
+    const playing=!audio.paused && !audio.ended && MP.started;
+    document.getElementById('mp-play').textContent= playing ? '⏸' : '▶️';
+    toggleIcon.textContent= MP.on ? '🔊' : '🔇';
+    toggle.classList.toggle('playing', playing && MP.on);
+    toggle.classList.toggle('off', !MP.on);
+    const muteBtn=document.getElementById('mp-mute');
+    muteBtn.classList.toggle('muted', !MP.on);
+    muteBtn.textContent = MP.on ? '🔇' : '🔊';
+    muteBtn.title = MP.on ? 'Вимкнути музику' : 'Увімкнути музику';
+  }
+
+  // first user gesture anywhere starts playback (respects autoplay policy)
+  function startOnGesture(){
+    if(MP.started)return;
+    MP.started=true;
+    if(MP.on){ loadTrack(MP.idx,true); }
+    else { loadTrack(MP.idx,false); }
+    refreshUI();
+  }
+  document.addEventListener('click',startOnGesture,{once:false});
+  document.addEventListener('touchend',startOnGesture,{once:false});
+
+  // toggle panel open/close (does NOT count as transport; but the gesture starts music)
+  toggle.onclick=e=>{
+    e.stopPropagation();
+    panel.classList.toggle('open');
+    if(!MP.started)startOnGesture();
+    refreshUI();
+  };
+  // clicking outside closes the panel
+  document.addEventListener('click',e=>{
+    if(panel.classList.contains('open') && !document.getElementById('music-player').contains(e.target)){
+      panel.classList.remove('open');
+    }
+  });
+
+  document.getElementById('mp-play').onclick=e=>{
+    e.stopPropagation();
+    if(!MP.started){startOnGesture();return;}
+    if(audio.paused){ MP.on=true; audio.play().catch(()=>{}); }
+    else { audio.pause(); }
+    mpSaveState(); refreshUI();
+  };
+  document.getElementById('mp-next').onclick=e=>{
+    e.stopPropagation();
+    MP.on=true; MP.started=true;
+    loadTrack(MP.idx+1,true); refreshUI();
+  };
+  document.getElementById('mp-prev').onclick=e=>{
+    e.stopPropagation();
+    MP.on=true; MP.started=true;
+    // if more than 3s in, restart current; else go to previous
+    if(audio.currentTime>3){ audio.currentTime=0; audio.play().catch(()=>{}); }
+    else { loadTrack(MP.idx-1,true); }
+    refreshUI();
+  };
+  document.getElementById('mp-mute').onclick=e=>{
+    e.stopPropagation();
+    MP.on=!MP.on;
+    if(MP.on){ MP.started=true; if(audio.paused)audio.play().catch(()=>{}); }
+    else { audio.pause(); }
+    mpSaveState(); refreshUI();
+  };
+
+  // auto-advance to next track when one ends (loops 1→2→3→4→1)
+  audio.addEventListener('ended',()=>{ loadTrack(MP.idx+1,true); refreshUI(); });
+  audio.addEventListener('play',refreshUI);
+  audio.addEventListener('pause',refreshUI);
+
+  // preload current track name in panel
+  document.getElementById('mp-track').textContent=PLAYLIST[MP.idx].name;
+  refreshUI();
+}
+
 /* ════════════ INIT ════════════ */
 
 // Show a visible banner if anything ever throws, so the screen is never silently dead.
@@ -2037,6 +2219,7 @@ window.onerror=function(msg,src,line,col){
 (function start(){
   try{ load(); }catch(e){ S=blankState(); }
   try{ initModeSelect(); }catch(e){}
+  try{ initMusic(); }catch(e){}
   try{
     if(S.screen==='tournament'&&S.players&&S.players.length){showTournament();}
     else if(S.screen==='bracket'&&S.bracket){showBracket();}
